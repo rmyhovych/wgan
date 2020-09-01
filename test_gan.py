@@ -47,10 +47,13 @@ def main():
 
     # -------------- HYPERPARAMETERS --------------#
 
-    GENERATOR_NOISE_SIZE = 100
-    GENERATOR_HIDDEN_LAYERS = [1200, 1200]
-    GENERATOR_HIDDEN_ACTIVATIONS = [torch.nn.functional.relu, torch.nn.functional.relu]
-    GENERATOR_LR = 0.000004
+    GENERATOR_NOISE_SIZE = 500
+    GENERATOR_HIDDEN_LAYERS = [3200, 3200]
+    GENERATOR_HIDDEN_ACTIVATIONS = [
+        torch.nn.functional.relu,
+        torch.nn.functional.relu,
+    ]
+    GENERATOR_LR = 0.000001
 
     DISCRIMINATOR_HIDDEN_LAYERS = [240, 240]
     DISCRIMINATOR_HIDDEN_ACTIVATIONS = [
@@ -59,10 +62,11 @@ def main():
     ]
     DISCRIMINATOR_LR = 0.00005
 
-    TRAINING_DATA_SIZE = 1000
-    N_EPISODES = 5000
+    TRAINING_DATA_SIZE = 30000
+    N_EPISODES = 20000
 
     DISCRIMINATOR_TRAINING = 1
+    MINIBATCH_SIZE = 50
 
     # ---------------------------------------------#
 
@@ -86,7 +90,7 @@ def main():
         discriminator.parameters(), lr=DISCRIMINATOR_LR
     )
 
-    data_training = images[:TRAINING_DATA_SIZE]
+    data_training = list(images[:TRAINING_DATA_SIZE])
 
     losses_discriminator = []
     losses_generator = []
@@ -96,9 +100,12 @@ def main():
 
             loss_sum = 0.0
             for _ in range(DISCRIMINATOR_TRAINING):
-                ys_disc_real = discriminator(data_training)
+                data_sample = torch.stack(
+                    random.sample(data_training, MINIBATCH_SIZE), dim=0
+                )
+                ys_disc_real = discriminator(data_sample)
 
-                noise_data = noise_f(TRAINING_DATA_SIZE, GENERATOR_NOISE_SIZE)
+                noise_data = noise_f(MINIBATCH_SIZE, GENERATOR_NOISE_SIZE)
                 ys_gen = generator(noise_data)
                 ys_disc_gen = discriminator(ys_gen)
 
@@ -112,7 +119,7 @@ def main():
             # --------- GENERATOR TRAIN --------- #
             loss_sum = 0.0
 
-            noise_data = noise_f(TRAINING_DATA_SIZE, GENERATOR_NOISE_SIZE)
+            noise_data = noise_f(MINIBATCH_SIZE, GENERATOR_NOISE_SIZE)
             ys_gen = generator(noise_data)
             ys_disc_gen = discriminator(ys_gen)
 

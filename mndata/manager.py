@@ -2,7 +2,7 @@ import os
 import torch
 import random
 
-from mnist import MNIST
+from mnist.loader import MNIST
 
 DIR = os.path.dirname(os.path.realpath(__file__))
 

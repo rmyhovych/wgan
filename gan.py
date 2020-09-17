@@ -28,7 +28,7 @@ def loss_wasserstein_f_gen(ys_disc_gen):
 
 
 def loss_wasserstein_f_disc(ys_disc_real, ys_disc_gen):
-    return torch.mean(ys_disc_gen) - torch.mean(ys_disc_real)
+    return -(torch.mean(ys_disc_real) - torch.mean(ys_disc_gen))
 
 
 """
@@ -41,8 +41,18 @@ loss_f_disc = loss_wasserstein_f_disc
 
 
 def noise_f(*shape):
-    n = 2.0 + torch.rand(shape) - 1.0
+    n = 20.0 * torch.rand(shape) - 10.0
     return n.to(DEVICE)
+
+
+class ClipOptimizer(object):
+    def __init__(self, params, clip_max):
+        self.params = params
+        self.clip_max = clip_max
+
+    def clip(self):
+        for p in self.params:
+            p = torch.clamp(p, -self.clip_max, self.clip_max)
 
 
 def main():
@@ -50,24 +60,25 @@ def main():
 
     # -------------- HYPERPARAMETERS --------------#
 
-    GENERATOR_NOISE_SIZE = 500
+    GENERATOR_NOISE_SIZE = 5
     GENERATOR_HIDDEN_LAYERS = [1200, 1200]
     GENERATOR_HIDDEN_ACTIVATIONS = [
         torch.nn.functional.relu,
         torch.nn.functional.relu,
     ]
 
-    DISCRIMINATOR_HIDDEN_LAYERS = [240, 240]
+    DISCRIMINATOR_HIDDEN_LAYERS = [620, 620]
     DISCRIMINATOR_HIDDEN_ACTIVATIONS = [
         torch.nn.functional.relu,
         torch.nn.functional.relu,
     ]
-    LR = 0.00001
+    LR = 0.000001
+    CLIP_MAX = 0.01
 
     TRAINING_DATA_SIZE = 50000
-    N_EPISODES = 5000
+    N_EPISODES = 35000
 
-    DISCRIMINATOR_TRAINING = 4
+    DISCRIMINATOR_TRAINING = 2
     MINIBATCH_SIZE = 64
 
     # ---------------------------------------------#
@@ -79,18 +90,21 @@ def main():
         GENERATOR_HIDDEN_LAYERS, GENERATOR_HIDDEN_ACTIVATIONS
     ):
         generator_builder.add_layer(layer_size, activation)
-    generator = generator_builder.add_layer(MNIST_SIZE, torch.sigmoid).build().to(DEVICE)
-    optim_generator = torch.optim.Adam(generator.parameters(), lr=LR)
+    generator = generator_builder.add_layer(
+        MNIST_SIZE, torch.sigmoid).build().to(DEVICE)
+    optim_generator = torch.optim.RMSprop(generator.parameters(), lr=LR)
 
     discriminator_builder = aitools.nn.NetworkFF.Builder(MNIST_SIZE)
     for layer_size, activation in zip(
         DISCRIMINATOR_HIDDEN_LAYERS, DISCRIMINATOR_HIDDEN_ACTIVATIONS
     ):
         discriminator_builder.add_layer(layer_size, activation)
-    discriminator = discriminator_builder.add_layer(1, torch.sigmoid).build().to(DEVICE)
-    optim_discriminator = torch.optim.Adam(
+    discriminator = discriminator_builder.add_layer(
+        1, torch.sigmoid).build().to(DEVICE)
+    optim_discriminator = torch.optim.RMSprop(
         discriminator.parameters(), lr=LR
     )
+    clip_discriminator = ClipOptimizer(discriminator.parameters(), CLIP_MAX)
 
     data_training = list(images[:TRAINING_DATA_SIZE].to(DEVICE))
 
@@ -116,7 +130,10 @@ def main():
                 loss_sum += loss.item()
                 loss.backward()
                 optim_discriminator.step()
-            losses_discriminator.append(loss_sum / float(DISCRIMINATOR_TRAINING))
+                clip_discriminator.clip()
+
+            losses_discriminator.append(
+                loss_sum / float(DISCRIMINATOR_TRAINING))
 
             # --------- GENERATOR TRAIN --------- #
             loss_sum = 0.0

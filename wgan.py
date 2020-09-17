@@ -46,13 +46,13 @@ def noise_f(*shape):
 
 
 class ClipOptimizer(object):
-    def __init__(self, params, clip_max):
-        self.params = params
+    def __init__(self, module, clip_max):
+        self.module = module
         self.clip_max = clip_max
 
     def clip(self):
-        for p in self.params:
-            p = torch.clamp(p, -self.clip_max, self.clip_max)
+        for p in self.module.parameters():
+            p.data = torch.clamp(p.data, -self.clip_max, self.clip_max)
 
 
 def main():
@@ -72,13 +72,13 @@ def main():
         torch.nn.functional.relu,
         torch.nn.functional.relu,
     ]
-    LR = 0.000001
+    LR = 0.00001
     CLIP_MAX = 0.01
 
     TRAINING_DATA_SIZE = 50000
     N_EPISODES = 35000
 
-    DISCRIMINATOR_TRAINING = 2
+    DISCRIMINATOR_TRAINING = 3
     MINIBATCH_SIZE = 64
 
     # ---------------------------------------------#
@@ -104,7 +104,7 @@ def main():
     optim_discriminator = torch.optim.RMSprop(
         discriminator.parameters(), lr=LR
     )
-    clip_discriminator = ClipOptimizer(discriminator.parameters(), CLIP_MAX)
+    clip_discriminator = ClipOptimizer(discriminator, CLIP_MAX)
 
     data_training = list(images[:TRAINING_DATA_SIZE].to(DEVICE))
 

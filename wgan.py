@@ -41,7 +41,7 @@ loss_f_disc = loss_wasserstein_f_disc
 
 
 def noise_f(*shape):
-    n = 20.0 * torch.rand(shape) - 10.0
+    n = torch.randn(shape)
     return n.to(DEVICE)
 
 
@@ -60,7 +60,7 @@ def main():
 
     # -------------- HYPERPARAMETERS --------------#
 
-    GENERATOR_NOISE_SIZE = 5
+    GENERATOR_NOISE_SIZE = 10
     GENERATOR_HIDDEN_LAYERS = [1200, 1200]
     GENERATOR_HIDDEN_ACTIVATIONS = [
         torch.nn.functional.relu,
@@ -76,7 +76,7 @@ def main():
     CLIP_MAX = 0.01
 
     TRAINING_DATA_SIZE = 50000
-    N_EPISODES = 35000
+    N_EPISODES = 20000
 
     DISCRIMINATOR_TRAINING = 5
     MINIBATCH_SIZE = 64

@@ -78,7 +78,7 @@ def main():
     TRAINING_DATA_SIZE = 50000
     N_EPISODES = 35000
 
-    DISCRIMINATOR_TRAINING = 3
+    DISCRIMINATOR_TRAINING = 5
     MINIBATCH_SIZE = 64
 
     # ---------------------------------------------#
